@@ -199,8 +199,40 @@ class AgentLoop:
                     )
                 messages.append({"role": "user", "content": "Reflect on the results and decide next steps."})
             else:
-                final_content = response.content
+                final_content = response.content or response.reasoning_content
                 break
+
+        if final_content is None:
+            logger.warning(
+                "Max tool iterations reached without a final answer; forcing a no-tool summary pass."
+            )
+            summary_messages = messages + [
+                {
+                    "role": "user",
+                    "content": (
+                        "Stop using tools. Provide the final response to the user now, "
+                        "based only on the current conversation and tool results."
+                    ),
+                }
+            ]
+            summary = await self.provider.chat(
+                messages=summary_messages,
+                tools=None,
+                model=self.model,
+                temperature=self.temperature,
+                max_tokens=self.max_tokens,
+            )
+            final_content = summary.content or summary.reasoning_content
+
+        if final_content is None:
+            if tools_used:
+                unique_tools = ", ".join(dict.fromkeys(tools_used))
+                final_content = (
+                    f"I finished running tools ({unique_tools}) but couldn't produce a final reply. "
+                    "Ask me to summarize the latest results."
+                )
+            else:
+                final_content = "I couldn't produce a response. Please try again."
 
         return final_content, tools_used
 

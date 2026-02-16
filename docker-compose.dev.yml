@@ -1,0 +1,15 @@
+services:
+  nanobot-dev:
+    build:
+      context: .
+    image: nanobot-dev:local
+    container_name: nanobot-dev
+    working_dir: /app
+    entrypoint: ["/bin/bash", "/app/scripts/dev-gateway.sh"]
+    ports:
+      - "18790:18790"
+    environment:
+      NANOBOT_PORT: "18790"
+    volumes:
+      - ./:/app
+      - ${NANOBOT_CONFIG_DIR}:/root/.nanobot
